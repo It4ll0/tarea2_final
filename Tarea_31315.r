@@ -1,4 +1,4 @@
-# cargar librerias
+#cargar librerias
 library(terra)
 library(sf)
 library(dplyr)
@@ -13,13 +13,19 @@ library(Kendall)
 library(raster)
 options(scipen = 999)
 
+
+path = "/Users/itallo/Documents/GitHub/Tarea2_final" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
+
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
-km = read_sf("C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2/cuenca.kml")
-km = mutate(km, Description = "Rio Aconcagua",altura = 1021)
-write_sf(km, "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2/cuenca.geojson")
+km = read_sf(paste0(path, "/cuenca.kml"))
 
-img.folder = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2/landsat"
+km = mutate(km, Description = "Rio Aconcagua",altura = 1021)
+
+write_sf(km, paste0(path, "/cuenca.geojson"))
+
+img.folder = paste0(path, "/landsat")
+
 
 files = list.files(img.folder, pattern = "SR_B", full.names = TRUE)
 
@@ -55,7 +61,7 @@ cuenca = imgs.r[[5]]
 plot(cuenca)
 
 #Importamos el LandCover Zhao
-lc.file = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2/LC_CHILE_2014_b.tif"
+lc.file = paste0(path, "/LC_CHILE_2014_b.tif")
 lc = rast(lc.file)
 
 #Cortamos el Lancover al area de nuestra cuenca
@@ -70,7 +76,8 @@ plot(lc.crop)
 
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
-dir="C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2/modis"
+dir=paste0(path, "/modis")
+
 files = list.files(dir, full.names = TRUE, pattern = "_ET_500");files
 
 et = rast(files)
@@ -153,7 +160,7 @@ lc.agg = aggregate(lc.crop, fact = fac, fun = "modal")
 plot(lc.crop, main = "LandCover resolucion original")
 plot(lc.agg, main = "LandCover de baja resolucion")
 
-# Obtenenemos la proyección del raster de origen
+# Obtenenemos la proyecci?n del raster de origen
 lc.proj <- crs(lc.agg)
 
 # Proyectamos el raster de destino
@@ -203,8 +210,8 @@ zonal.df
 ggplot(zonal.df %>% filter(ID != "Otros"))+
   geom_line(aes(x = fecha, y = ET, color = ID), linewidth = 1) +
   scale_x_date(limits = c(ymd("2002-12-27"), ymd("2016-6-31"))) +
-  labs(x = "Fecha",y = "Evapotranspiración real (mm)", 
-       title = "Evapotranspiración mensual por categoria de cobertura de suelo",
+  labs(x = "Fecha",y = "Evapotranspiraci?n real (mm)", 
+       title = "Evapotranspiraci?n mensual por categoria de cobertura de suelo",
        color = "Land Cover")
 
 'LANDCOVER ZHAO'
@@ -221,16 +228,16 @@ lc.crop[lc.crop < 300 & lc.crop >=235] = 3
 lc.crop[lc.crop < 400 & lc.crop >=300] = 4
 lc.crop[lc.crop < 500 & lc.crop >=400] = 5
 
-writeRaster(lc.crop, "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2/LC_reclasificado.tif", overwrite = TRUE)
+writeRaster(lc.crop, paste0(path, "/"), overwrite = TRUE)
 
 plot(lc.crop, col = c("yellow","purple","red","blue","green"), 
      main = "Landcover por categorias") #Ploteamos lc cortado, cambiamos los colores a las categorias
 
 lc.crop_vec <- as.vector(lc.crop) #Convertimos lc.crop en un vector
 
-color_counts <- table(lc.crop_vec) #Obtenenemos la tabla de cantidades de las categorías de color
+color_counts <- table(lc.crop_vec) #Obtenenemos la tabla de cantidades de las categor?as de color
 
-# Creamos un gráfico de barras de la cantidad por categoria
+# Creamos un gr?fico de barras de la cantidad por categoria
 text(x = barplot(table(lc.crop_vec), col = c("yellow","purple","red","blue","green"),
                  main = "Cantidad por categoria",
                  xlab = "Categoria", ylab = "Cantidad",
