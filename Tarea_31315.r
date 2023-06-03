@@ -72,7 +72,12 @@ plot(lc.crop)
 
 'CR2MET2.5'
 
+# carpeta donde se encuentran los archivos de PP CR2MET
+pp.dir = paste0(path, "/PPCR2MET2.5")
 
+files = list.files(pp.dir, full.names = TRUE, pattern = "nc$");files
+pp = rast(files,subds = "pr")
+pp
 
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
@@ -245,3 +250,5 @@ text(x = barplot(table(lc.crop_vec), col = c("yellow","purple","red","blue","gre
      y = table(lc.crop_vec),
      labels = table(lc.crop_vec),
      pos = 3)
+
+
