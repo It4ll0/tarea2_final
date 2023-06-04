@@ -19,45 +19,37 @@ path = "/Users/itallo/Documents/GitHub/Tarea2_final" #aqui poner el path de la c
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
 km = read_sf(paste0(path, "/cuenca.kml"))
-
 km = mutate(km, Description = "Rio Aconcagua",altura = 1021)
-
 write_sf(km, paste0(path, "/cuenca.geojson"))
-
 img.folder = paste0(path, "/landsat")
-
-
 files = list.files(img.folder, pattern = "SR_B", full.names = TRUE)
-
 imgs = rast(files)
 imgs
 
 img_ext = ext(imgs)
 img_ext
 
-img_ext[2]-img_ext[1]
+img_ext[2]-img_ext[1]#medimos ancho y largo de la imagen
 img_ext[4]-img_ext[3]
-
-km
-st_crs(imgs) == st_crs(km)
+st_crs(imgs) == st_crs(km) 
 
 img.crs = st_crs(imgs)
 img.crs
 
 v = st_transform(x = km, crs = img.crs)
 
-st_crs(imgs) == st_crs(v)
+st_crs(imgs) == st_crs(v)#verificamos que se tenga el mismo crs
 imgs.c = crop(imgs, vect(v))
 plot(imgs.c)
 
-imgs.m = mask(imgs, vect(v))
+imgs.m = mask(imgs, vect(v))#creamos mascara de la cuenca
 plot(imgs.m)
 
 imgs.cm = crop(imgs.m, vect(v))
 plot(imgs.cm)
 
 imgs.r = project(imgs.cm, vect(km), method = "near")
-cuenca = imgs.r[[5]]
+cuenca = imgs.r[[5]]#porque 5???
 plot(cuenca)
 
 #Importamos el LandCover Zhao
@@ -73,17 +65,17 @@ plot(lc.crop)
 'CR2MET2.5'
 
 # carpeta donde se encuentran los archivos de PP CR2MET
-pp.dir = paste0(path, "/PPCR2MET2.5")
+pp.dir = paste0(path, "/PPCR2MET2.5") #directorio datos de precipitación
 
 files = list.files(pp.dir, full.names = TRUE, pattern = "nc$");files
 pp = rast(files,subds = "pr")
-pp
+pp#datos de CR2MET almacenados en pp
 
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
 dir=paste0(path, "/modis")
 
-files = list.files(dir, full.names = TRUE, pattern = "_ET_500");files
+files = list.files(dir, full.names = TRUE, pattern = "_ET_500");files#datos evotranspiracion
 
 et = rast(files)
 fechas.et = names(et) %>% 
