@@ -79,10 +79,12 @@ fechas.pp = seq(
 )
 # asignamos las fechas como nombre de las capas
 names(pp) = fechas.pp
+length(fechas.pp) == length(names(pp))
 
 # extraer valores dentro de la cuenca
 extr = terra::extract(pp, km)
 as_tibble(extr)
+
 
 # calcular precipitacion promedio de la cuenca
 pp.day = extr %>%
@@ -100,6 +102,13 @@ pp.month = pp.day %>%
   summarise(pp = sum(pp))
 pp.month
 
+# PP anual
+pp.year = pp.month %>% 
+  mutate(fecha = as_date(fecha),
+         fecha = floor_date(fecha, unit = "year")) %>% 
+  group_by(fecha) %>% 
+  summarise(pp = sum(pp))
+pp.year
 
 
 
