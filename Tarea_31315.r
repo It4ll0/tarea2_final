@@ -11,6 +11,7 @@ library(readxl)
 library(vctrs)
 library(Kendall)
 library(raster)
+library(ggrepel)
 options(scipen = 999)
 
 #path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
@@ -100,7 +101,7 @@ plot(q90)
 cortes = seq(0,50,10);cortes
 
 plot(et, breaks=cortes)
-plot(et[[1]], breaks=cortes, main = "ET MODIS 2002-12-27")
+plot(et[[1]], breaks=cortes, main = "ET MODIS 2000-01-01")
 
 #Obtenemos las imagenes mensuales a partir de diarias
 daily_to_monthly = function(x, dates, fun = "mean"){
@@ -251,4 +252,25 @@ text(x = barplot(table(lc.crop_vec), col = c("yellow","purple","red","blue","gre
      labels = table(lc.crop_vec),
      pos = 3)
 
+#caudal cr2
+
+q.month = read_csv(paste0(path, "/Caudal_Aconcagua.csv")) %>% 
+  pivot_longer(cols = 2:13, names_to = "mes",values_to = "caudal") # pivotear columnas
+q.month
+
+# vector de fechas mensuales
+fechas = seq(ym("1995-01"), ym("2015-12"), by = "months")
+
+# crear columna con fechas
+q.month = q.month %>% 
+  mutate(fecha = fechas) %>% 
+  select(fecha, caudal)
+q.month
+
+# calcular caudal medio anual
+q.year = q.month %>% 
+  mutate(fecha = floor_date(fecha,unit = "year")) %>% 
+  group_by(fecha) %>% 
+  summarise_all(mean)
+q.year
 
