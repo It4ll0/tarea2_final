@@ -155,6 +155,7 @@ et.y = to_yearly(et.m, dates = names(et.m), fun = "sum")
 et.y
 et
 
+'''
 #Limpiamos y ordenamos los datos
 cat.id = values(lc.crop) %>% unique();cat.id
 cat.id = cat.id[-1];cat.id
@@ -176,6 +177,19 @@ et.proj <- project(et, lc.proj)
 lc.r <- resample(lc.agg, et.proj, method = "bilinear")
 lc.r = crop(lc.r, cuenca)
 plot(lc.r, main = "LandCover resampleado")
+'''
+
+# Tabla con todos los valores del raster
+values.lc = values(lc.crop, dataframe = TRUE) %>%
+  drop_na()
+
+# calcular numero de pixeles por valor
+cat.npix = table(values.lc) %>% 
+  as.vector
+
+# reproyectar raster
+lc.r = terra::project(lc.crop, crs(et.y), method = 'near');lc
+plot(lc.r, main = 'Land Cover reproyectado')
 
 rcl = c(100,150,1,
         210,232,2,
@@ -190,7 +204,29 @@ lc.cats
 lc.reclass = classify(lc.r, rcl.mat, right=NA)
 levels(lc.reclass) = lc.cats
 
-plot(lc.reclass, main = "LandCover Reclasificado", col = c("yellow","purple","red","blue","green", "white"))
+plot(lc.reclass, main = "LandCover Reclasificado", col = c("yellow","purple","red","blue","green"))
+
+# cuanto mas grande son los pixeles de ET de modis con respecto a la resolucion del LandCover?
+fac = res(et.y)[1]/res(lc)[1];fac
+# cambiar resolucion a un raster
+lc.agg = aggregate(lc, fact = fac, fun = "modal")
+
+plot(lc, main = "LandCover resolucion original")
+plot(lc.agg, main = "LandCover de baja resolucion")
+
+# resamplear para que los raster coincidan pixel a pixel
+lc.r = resample(lc.agg, et.y, method = "near")
+plot(lc.r, main="LandCover resampleado", col = colores)
+
+# Consumo medio por cobertura
+etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>% 
+  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  mutate(fecha = as_date(fecha))
+etr_mean
+
+
+
+
 
 #reproyectamos lo rasters para que tengan el mismo extend
 lc.reclass.reprojected <- project(lc.reclass, crs(et))
@@ -219,6 +255,53 @@ ggplot(zonal.df %>% filter(ID != "Otros"))+
   labs(x = "Fecha",y = "Evapotranspiraci?n real (mm)", 
        title = "Evapotranspiraci?n mensual por categoria de cobertura de suelo",
        color = "Land Cover")
+
+
+etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>% 
+  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  mutate(fecha = as_date(fecha))
+etr_mean
+
+# Asignar ET anual de las plantaciones a los pixeles de matorral
+
+# raster vacio para guardar et modificada
+et.mod = rast()
+# numero de capaz sobre las que iterar
+n = nlyr(et.y)
+# vector con la ETr anual de las plantaciones forestales
+et_pf = etr_mean %>% 
+  filter(name == 'Plantaciones Forestales') %>% 
+  pull(ET);et_pf
+# ciclo de 1 a n
+for (i in 1:n) {
+  # seleccionar imagen i de ETr
+  img_i = et.y[[i]]
+  # modificar ETr de las plantaciones a los pixeles que tienen categoria 4 en el LC (matorrales)a
+  img_i[lc.r == 3] = et_pf[i]
+  # guardar la imagen modificada junto con las anteriores
+  et.mod = c(et.mod, img_i)
+}
+
+
+# Etr anual de la cuenca modificada para el balance hidrico
+extr = terra::extract(et.mod, cuenca)
+et.year.mod = extr %>%
+  select(-ID) %>% 
+  drop_na() %>% 
+  summarise_all(median) %>%
+  pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et_mod") %>% 
+  mutate(fecha = as_date(fecha))
+et.year
+
+# Etr anual de la cuenca riginalpara el balance hidrico
+extr = terra::extract(et.y, cuenca)
+et.year = extr %>%
+  select(-ID) %>% 
+  drop_na() %>% 
+  summarise_all(median) %>%
+  pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et") %>% 
+  mutate(fecha = as_date(fecha))
+et.year
 
 'LANDCOVER ZHAO'
 #Proyectamos las categorias solicitadas en nuestro raster segun el LandCover Zhao
@@ -252,7 +335,7 @@ text(x = barplot(table(lc.crop_vec), col = c("yellow","purple","red","blue","gre
      labels = table(lc.crop_vec),
      pos = 3)
 
-#caudal cr2
+#caudal dga
 
 q.month = read_csv(paste0(path, "/Caudal_Aconcagua.csv")) %>% 
   pivot_longer(cols = 2:13, names_to = "mes",values_to = "caudal") # pivotear columnas
@@ -273,4 +356,31 @@ q.year = q.month %>%
   group_by(fecha) %>% 
   summarise_all(mean)
 q.year
+
+# Juntar variables del Balance Hidrico ------------------------------------
+data.year = full_join(pp.year, et.year.mod, by = "fecha") %>% 
+  full_join(et.year, by = "fecha") %>% 
+  full_join(q.year, by = "fecha") %>% 
+  mutate(
+    disp = pp-et-caudal,
+    disp_mod = pp-et_mod-caudal
+    
+  )
+
+# Balance a hidrico anual
+# serie de tiempo de datos anuales
+ggplot(data.year)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = et, color = "ETr"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = et_mod, color = "ETr_modificada"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = disp_mod, color = "Disponibilidad_mod"), linewidth = 0.8)+
+  geom_hline(yintercept = 0, linewidt = 0.8, linetype = "dashed")+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+               date_labels = "%Y", date_breaks = "2 year")+
+  labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
+       subtitle = "Los año sin medicion de caudal, faltan datos en algunos meses",
+       color = "")
 
