@@ -80,6 +80,29 @@ fechas.pp = seq(
 # asignamos las fechas como nombre de las capas
 names(pp) = fechas.pp
 
+# extraer valores dentro de la cuenca
+extr = terra::extract(pp, km)
+as_tibble(extr)
+
+# calcular precipitacion promedio de la cuenca
+pp.day = extr %>%
+  select(-ID) %>% 
+  drop_na() %>% 
+  summarise_all(mean) %>% 
+  pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "pp")
+pp.day
+
+# PP mensual
+pp.month = pp.day %>% 
+  mutate(fecha = as_date(fecha),
+         fecha = floor_date(fecha, unit = "month")) %>% 
+  group_by(fecha) %>% 
+  summarise(pp = sum(pp))
+pp.month
+
+
+
+
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
 dir=paste0(path, "/modis")
