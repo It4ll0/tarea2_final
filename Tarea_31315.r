@@ -73,8 +73,8 @@ pp    #datos de CR2MET almacenados en pp
 
 # crear vector de fechas
 fechas.pp = seq(
-  ymd("1960-01-01"),
-  ymd("2021-12-31"),
+  ymd("1995-01-01"),
+  ymd("2015-12-31"),
   by = "days"
 )
 # asignamos las fechas como nombre de las capas
