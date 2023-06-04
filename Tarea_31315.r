@@ -13,9 +13,8 @@ library(Kendall)
 library(raster)
 options(scipen = 999)
 
-#holo
-path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
-
+#path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
+path = "/Users/itallo/Documents/GitHub/Tarea2_final"
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
 km = read_sf(paste0(path, "/cuenca.kml"))
@@ -69,7 +68,16 @@ pp.dir = paste0(path, "/PPCR2MET2.5") #directorio datos de precipitación
 
 files = list.files(pp.dir, full.names = TRUE, pattern = "nc$");files
 pp = rast(files,subds = "pr")
-pp#datos de CR2MET almacenados en pp
+pp    #datos de CR2MET almacenados en pp
+
+# crear vector de fechas
+fechas.pp = seq(
+  ymd("1960-01-01"),
+  ymd("2021-12-31"),
+  by = "days"
+)
+# asignamos las fechas como nombre de las capas
+names(pp) = fechas.pp
 
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
