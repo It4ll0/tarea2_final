@@ -13,8 +13,8 @@ library(Kendall)
 library(raster)
 options(scipen = 999)
 
-
-path = "/Users/itallo/Documents/GitHub/Tarea2_final" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
+#holo
+path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
 
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
