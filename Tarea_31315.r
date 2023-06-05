@@ -14,8 +14,8 @@ library(raster)
 library(ggrepel)
 options(scipen = 999)
 
-path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
-#path = "/Users/itallo/Documents/GitHub/Tarea2_final"
+#path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
+path = "/Users/itallo/Library/Mobile Documents/com~apple~CloudDocs/Documents/GitHub/Tarea2_final"
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
 km = read_sf(paste0(path, "/cuenca.kml"))
@@ -80,7 +80,7 @@ extr = terra::extract(pp, km)
 as_tibble(extr)
 
 ################# paso a datos diarios la precipitacion de la cuenca
-extr <- extr %>% select(-ID)
+extr <- extr %>% .[ , -which(names(.) == "ID")]
 extr <- extr %>% drop_na()
 pp.day <- extr %>% summarise_all(mean)
 pp.day <- pp.day %>% pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "pp")
@@ -154,19 +154,21 @@ separate_eight_day_composite = function(x, fechas){
   r = c(r1,r2)
   return(r)
 }
-et = separate_eight_day_composite(et, fechas.et);et
+
 
 fechas.et = names(et) %>% 
   str_sub(start = 26, end = 32) %>%
   as.Date("%Y%j")
 names(et) = fechas.et
 
+et = separate_eight_day_composite(et, fechas.et);et
+
 hist(et[[1]], breaks = 20)
 summary(et[[1]])
 
 et[et > 1000] = NA
 
-
+hist(et[[1]], breaks = 20)
 #Obtenemos las imagenes mensuales a partir de diarias
 daily_to_monthly = function(x, dates, fun = "mean"){
   mes = floor_date(as_date(dates), unit = "month")
@@ -217,7 +219,7 @@ et.m = daily_to_monthly(et, dates = fechas.et, fun = "sum")
 et.m
 et.y = to_yearly(et.m, dates = names(et.m), fun = "sum")
 et.y
-et
+
 
 # Tabla con todos los valores del raster
 values.lc = values(lc.crop, dataframe = TRUE) %>%
@@ -291,13 +293,14 @@ n = nlyr(et.y)
 et_pf = etr_mean %>% 
   filter(nombre == 'Matorrales') %>% 
   pull(ET);et_pf
+et_pf
 
 # ciclo de 1 a n
 for (i in 1:n) {
   # seleccionar imagen i de ETr
   img_i = et.y[[i]]
   # modificar ETr de las plantaciones a los pixeles que tienen categoria 4 en el LC (matorrales)a
-  img_i[lc.r == 5] = et_pf[i]
+  img_i[lc.r == 4] = et_pf[i]
   # guardar la imagen modificada junto con las anteriores
   et.mod = c(et.mod, img_i)
 }
@@ -418,7 +421,7 @@ lc.crop[lc.crop < 300 & lc.crop >=235] = 3
 lc.crop[lc.crop < 400 & lc.crop >=300] = 4
 lc.crop[lc.crop < 500 & lc.crop >=400] = 5
 
-writeRaster(lc.crop, paste0(path, "/"), overwrite = TRUE)
+#writeRaster(lc.crop, paste0(path, "/"), overwrite = TRUE)
 
 plot(lc.crop, col = c("yellow","purple","red","blue","green"), 
      main = "Landcover por categorias") #Ploteamos lc cortado, cambiamos los colores a las categorias
@@ -446,10 +449,9 @@ q.month
 fechas = seq(ym("1995-01"), ym("2015-12"), by = "months")
 
 # crear columna con fechas
-q.month = q.month %>% 
+q.month <- q.month %>% 
   mutate(fecha = fechas) %>% 
-  select(fecha, caudal)
-q.month
+  dplyr::select(fecha, caudal)
 
 # calcular caudal medio anual
 q.year = q.month %>% 
@@ -484,4 +486,5 @@ ggplot(data.year)+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        subtitle = "Los año sin medicion de caudal, faltan datos en algunos meses",
        color = "")
+
 
