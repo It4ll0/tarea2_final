@@ -488,3 +488,407 @@ ggplot(data.year)+
        color = "")
 
 
+# Tendencias 
+
+# ANALISIS DE TENDENCIA ---------------------------------------------------
+# Test de Mann-Kendall
+# Hipotesis nula: no hay tendencia en los datos
+# Hipotesis alternativa: hay tendencia en los datos (positiva o negativa)
+# si p-value < nivel de significancia (usualmente 0.05) 
+# entonces se rechaza la hipotesis nula, es decir, existe una tendencia en los datos
+
+# Obtener tablas con el valor medio de la cuenca para cada fecha
+# ETr mensual
+et.month = values(et.m, dataframe=TRUE) %>% # trasnformar las imagenes a una tabla (dataframe)
+  drop_na() %>% # borrar valores NA
+  summarise_all(mean) %>% # calcular el promedio de cada columna
+  pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et") %>%  # pivotear tabla
+  mutate(fecha = as_date(fecha))
+et.month
+
+# Etr anual
+et.year = values(et.y, dataframe=TRUE) %>% 
+  drop_na() %>% 
+  summarise_all(mean) %>%
+  pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et") %>% 
+  mutate(fecha = as_date(fecha))
+et.year
+
+# PP mensual
+pp.month = pp.day %>% 
+  mutate(fecha = as_date(fecha),
+         mes = floor_date(fecha, unit = "month")) %>% 
+  group_by(mes) %>% 
+  summarise(pp = sum(pp))
+pp.month
+
+# PP anual
+pp.year = pp.month %>% 
+  mutate(fecha = as_date(mes),
+         year = floor_date(fecha, unit = "year")) %>% 
+  group_by(year) %>% 
+  summarise(pp = sum(pp))
+pp.year
+
+# PET mensual
+pet.month = pet.day %>% 
+  mutate(fecha = as_date(fecha),
+         mes = floor_date(fecha, unit = "month")) %>% 
+  group_by(mes) %>% 
+  summarise(pet = sum(pet))
+pet.month
+
+# PET anual
+pet.year = pet.month %>% 
+  mutate(fecha = as_date(mes),
+         year = floor_date(fecha, unit = "year")) %>% 
+  group_by(year) %>% 
+  summarise(pet = sum(pet))
+pet.year
+
+
+# Precipitacion -----------------------------------------------------------
+
+# Tendencia de los datos de precipitacion mensual
+res = MannKendall(pp.month$pp)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+pp.month.ts = ts(data = pp.month$pp, start = c(1960,1), frequency = 12)
+pp.month.ts
+
+# Analisis de tendencia estacional
+SeasonalMannKendall(pp.month.ts)
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(pp.month, aes(x=mes, y=pp))+
+  geom_line()+
+  geom_smooth()
+
+# Tendencia de la precipitacion anual
+res = MannKendall(pp.year$pp)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+pp.year.ts = ts(data = pp.year$pp, start = c(1960), frequency = 1)
+pp.year.ts
+
+# Analisis de tendencia estacional
+SeasonalMannKendall(pp.year.ts)
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(pp.year, aes(x=year, y=pp))+
+  geom_line()+
+  geom_smooth()
+
+# Acortemos los datos desde 2010 a 2021
+pp.year.2 = pp.year %>% filter(year > ymd("2000-01-01"))
+
+# Tendencia de la precipitacion anual
+res = MannKendall(pp.year.2$pp)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+pp.year.2.ts = ts(data = pp.year.2$pp, start = c(2001), frequency = 1)
+pp.year.2.ts
+
+# Analisis de tendencia estacional
+SeasonalMannKendall(pp.year.2.ts)
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(pp.year.2, aes(x=year, y=pp))+
+  geom_line()+
+  geom_smooth()
+
+
+# Evapotranspiracion real -------------------------------------------------
+# Tendencia de los datos de Evapotranspiracion mensual
+res = MannKendall(et.month$et)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+et.month.ts = ts(data = et.month$et, start = c(2000,1), frequency = 12)
+et.month.ts
+
+# Analisis de tendencia estacional
+SeasonalMannKendall(et.month.ts)
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(et.month, aes(x=fecha, y=et))+
+  geom_line()+
+  geom_smooth()
+
+# Tendencia de la precipitacion anual
+res = MannKendall(et.year$et)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+et.year.ts = ts(data = et.year$et, start = c(1960), frequency = 1)
+et.year.ts
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(et.year, aes(x=fecha, y=et))+
+  geom_line()+
+  geom_smooth()
+
+
+
+# Evapotranspiracion potencial --------------------------------------------
+# Tendencia de los datos de precipitacion mensual
+res = MannKendall(pet.month$pet)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+pet.month.ts = ts(data = pet.month$pet, start = c(1960,1), frequency = 12)
+pet.month.ts
+
+# Analisis de tendencia estacional
+SeasonalMannKendall(pet.month.ts)
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(pet.month, aes(x=mes, y=pet))+
+  geom_line()+
+  geom_smooth()
+
+# Tendencia de la precipitacion anual
+res = MannKendall(pet.year$pet)
+res
+
+# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
+pet.year.ts = ts(data = pet.year$pet, start = c(1960), frequency = 1)
+pet.year.ts
+
+# Analisis de tendencia estacional
+SeasonalMannKendall(pet.year.ts)
+
+# Agregar una linea suavizada a los datos para observar la tendencia
+ggplot(pet.year, aes(x=year, y=pet))+
+  geom_line()+
+  geom_smooth()
+
+# Acortemos los datos desde 2010 a 2021
+pet.year.2 = pet.year %>% filter(year > ymd("2000-01-01"))
+
+# Tendencia de la precipitacion anual
+res = MannKendall(pet.year.2$pet)
+res
+
+# Analisis de correlacion -------------------------------------------------
+
+# CORRELACION DE DATOS MENSUALES
+# unimos las tablas de datos mensuales
+month.data = left_join(et.month, pp.month, by = c("fecha"="mes")) %>% 
+  left_join(pet.month, by = c("fecha"="mes"))
+month.data
+
+# ajustamos un modelo lineal a la pp y etr
+linear.model = lm(formula = et ~ pp, data = month.data)
+summary(linear.model)
+coefficients(linear.model)
+
+# plotear la correlacion
+ggplot(month.data, aes(x= et, y = pp))+
+  geom_point()+ # grafico de dispersion
+  geom_abline()+ # linea 1:1
+  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
+  ggpubr::stat_cor()+ # escribe el valor de  la correlacion (R) en el grafico
+  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
+
+# ajustamos un modelo lineal a la etp y etr
+linear.model = lm(formula = et ~ pet, data = month.data)
+summary(linear.model)
+coefficients(linear.model)
+
+# plotear la correlacion
+ggplot(month.data, aes(x= et, y = pet))+
+  geom_point()+ # grafico de dispersion
+  geom_abline()+ # linea 1:1
+  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
+  ggpubr::stat_cor()+ # escribe el valor de  la correlacion (R) en el grafico
+  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
+
+
+# CORRELACION DE DATOS ANUALES
+# unimos las tablas de datos mensuales
+year.data = left_join(et.year, pp.year, by = c("fecha"="year")) %>% 
+  left_join(pet.year, by = c("fecha"="year"))
+
+
+# ajustamos un modelo lineal a la et y pp
+linear.model = lm(formula = et ~ pp, data = year.data)
+summary(linear.model)
+coefficients(linear.model)
+
+# plotear la correlacion
+ggplot(year.data, aes(x= et, y = pp))+
+  geom_point()+ # grafico de dispersion
+  geom_abline()+ # linea 1:1
+  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
+  ggpubr::stat_cor(label.x = 500)+ # escribe el valor de  la correlacion (R) en el grafico
+  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
+
+# ajustamos un modelo lineal a la et y etp
+linear.model = lm(formula = et ~ pet, data = year.data)
+summary(linear.model)
+coefficients(linear.model)
+
+# plotear la correlacion
+ggplot(year.data, aes(x= et, y = pet))+
+  geom_point()+ # grafico de dispersion
+  geom_abline()+ # linea 1:1
+  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
+  ggpubr::stat_cor(label.x = 1600)+ # escribe el valor de  la correlacion (R) en el grafico
+  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
+
+# Balance Hídrico.
+# Datos de caudales estan en m3/s mientras que PP y ETr estan en mm
+# Se deben transformar datos de m3/s a mm
+# La fórmula para convertir la media mensual de caudal en metros cúbicos por segundo a 
+# caudal acumulado mensual en milímetros es:
+#   
+#   caudal mensual en milímetros = 
+#       (caudal medio mensual en metros cúbicos por segundo x 
+#       60 segundos por minuto x 
+#       60 minutos por hora x 
+#       24 horas por día x
+#       número de días en el mes) / 
+#       (área de la cuenca en metros cuadrados x 0.001) 
+# 
+# Donde:
+#   
+#   La precipitación acumulada mensual se expresa en milímetros.
+#   El caudal medio mensual se expresa en metros cúbicos por segundo.
+#   El área de la cuenca se expresa en metros cuadrados.
+#   El factor de conversión de 0.001 se usa para convertir de metros a milímetros.
+
+# calcular el area de la cuenca
+sf_use_s2(FALSE) # necesario cuando la cuenca esta en coordenadas geográficas
+st_area(cuenca) # calcular area
+area_cuenca = st_area(cuenca) %>% as.numeric() # sacar solo el valor sin la unidad
+area_cuenca
+
+# m3/s -> mm
+q.month = q.month %>% mutate(
+  days = days_in_month(fecha),
+  caudal = caudal*(3600*24*days)/(0.001*area_cuenca)
+)
+
+data.month = full_join(pp.month, et.month, by = "fecha") %>% 
+  full_join(q.month, by = "fecha") %>% 
+  select(-days)
+data.month
+
+ggplot(data.month)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitación"))+
+  geom_line(aes(x = fecha, y = et, color = "ETr"))+
+  geom_line(aes(x = fecha, y = caudal,color = "Caudal"))+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")))+
+  labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
+       color = "")
+
+# Calcular media mensual por variable para el mismo periodo de tiempo (2000 en adelante)
+data.mean = data.month %>% 
+  drop_na() %>% 
+  mutate(mes = month(fecha)) %>% 
+  group_by(mes) %>% 
+  summarise_all(mean) %>% 
+  mutate(disp = pp-et-caudal)
+
+ggplot(data.mean)+
+  geom_line(aes(x = mes, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = mes, y = et, color = "ETr"), linewidth = 0.8)+
+  geom_line(aes(x = mes, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_line(aes(x = mes, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
+  geom_hline(yintercept = 0, color = "black", linetype = "dashed", linewidth = 0.8)+
+  # scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")))+
+  labs(x = "mes", y = "(mm)", title = "Balance hídrico medio mensual",
+       color = "")
+
+# Balance a hidrico anual
+
+# calcular acumulado anual
+data.year = data.month %>% 
+  mutate(fecha = floor_date(fecha, unit = "year")) %>% 
+  group_by(fecha) %>% 
+  summarise_all(sum) %>% 
+  mutate(disp = pp-et-caudal)
+
+# serie de tiempo de datos anuales
+ggplot(data.year)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = et, color = "ETr"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+               date_labels = "%Y", date_breaks = "2 year")+
+  labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
+       subtitle = "Los año sin medicion de caudal, faltan datos en algunos meses",
+       color = "")
+
+# hay meses de caudales que no tienen datos, por eso hay años que no tienen datos de caudales
+# podemos eliminar esos meses con drop_na
+# calcular acumulado anual sin contar los meses de datos faltantes
+data.year = data.month %>% 
+  mutate(fecha = floor_date(fecha, unit = "year")) %>% 
+  drop_na() %>% 
+  group_by(fecha) %>% 
+  summarise_all(sum) %>% 
+  mutate(disp = pp-et-caudal)
+
+# serie de tiempo de datos anuales
+ggplot(data.year)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = et, color = "ETr"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+               date_labels = "%Y", date_breaks = "2 year")+
+  labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
+       subtitle = "Se eliminan los meses de datos de caudal faltantes antes de sumar el acumulado anual",
+       color = "")
+
+
+# Podemos tambien ignorar los años donde faltan datos mensuales de caudales
+# calcular acumulado anual sin contar los meses de datos faltantes
+data.year = data.month %>% 
+  mutate(fecha = floor_date(fecha, unit = "year")) %>% 
+  group_by(fecha) %>% 
+  summarise_all(sum) %>% 
+  mutate(disp = pp-et-caudal) %>% 
+  drop_na()
+
+# serie de tiempo de datos anuales
+ggplot(data.year)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = et, color = "ETr"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+               date_labels = "%Y", date_breaks = "2 year")+
+  labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
+       subtitle = "Se ignoran los años donde faltan datos mensuales de caudal",
+       color = "")
+
+# Tambien podemos ignorar los meses donde no hay medicion de caudales solo para esa variable
+data.year = data.month %>% 
+  mutate(fecha = floor_date(fecha, unit = "year")) %>% 
+  group_by(fecha) %>% 
+  summarise_all(sum, na.rm = TRUE) %>% # aqui sumamos independiente de si faltan algunos meses en el año 
+  mutate(disp = pp-et-caudal)
+
+# serie de tiempo de datos anuales
+ggplot(data.year)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = et, color = "ETr"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+               date_labels = "%Y", date_breaks = "2 year")+
+  labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
+       subtitle = "La suma anual se hace con todos los meses disponibles para cada variable",
+       color = "")
+
