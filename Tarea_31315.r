@@ -108,11 +108,6 @@ pp.year
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
 dir=paste0(path, "/modis")
-
-files = list.files(dir, full.names = TRUE, pattern = "_ET_500");files#datos evotranspiracion
-
-et = rast(files)
-
 separate_eight_day_composite = function(x, fechas){
   # dias que faltan para terminar el mes
   days.dif = 1+(days_in_month(fechas) - day(fechas))
@@ -157,20 +152,21 @@ separate_eight_day_composite = function(x, fechas){
   return(r)
 }
 
+files = list.files(dir, full.names = TRUE, pattern = "_aid0001");files#datos evotranspiracion
+
+et = rast(files)
 
 fechas.et = names(et) %>% 
   str_sub(start = 26, end = 32) %>%
   as.Date("%Y%j")
 names(et) = fechas.et
 
-et = separate_eight_day_composite(et, fechas.et);et
+# separar las imagenes que abarcan mas de un mes dentro de los 8 dias del composite
+et = separate_eight_day_composite(et, fechas.et)
 
-hist(et[[1]], breaks = 20)
-summary(et[[1]])
+# actualizar vector de fechas
+fechas.et = as_date(names(et))
 
-et[et > 1000] = NA
-
-hist(et[[1]], breaks = 20)
 #Obtenemos las imagenes mensuales a partir de diarias
 daily_to_monthly = function(x, dates, fun = "mean"){
   mes = floor_date(as_date(dates), unit = "month")
@@ -221,6 +217,16 @@ et.m = daily_to_monthly(et, dates = fechas.et, fun = "sum")
 et.m
 et.y = to_yearly(et.m, dates = names(et.m), fun = "sum")
 et.y
+
+hist(et.y[[1]])
+summary(et.y)
+et.y[et.y > 24000] = NA
+hist(et.y[[1]], breaks = 20)
+
+hist(et.m[[1]])
+summary(et.m)
+et.m[et.m > 4000] = NA
+hist(et.m[[1]], breaks = 20)
 
 
 # Tabla con todos los valores del raster
@@ -295,7 +301,6 @@ n = nlyr(et.y)
 et_pf = etr_mean %>% 
   filter(nombre == 'Matorrales') %>% 
   pull(ET);et_pf
-et_pf
 
 # ciclo de 1 a n
 for (i in 1:n) {
