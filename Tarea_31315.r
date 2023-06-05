@@ -14,8 +14,8 @@ library(raster)
 library(ggrepel)
 options(scipen = 999)
 
-#path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
-path = "/Users/itallo/Documents/GitHub/Tarea2_final"
+path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
+#path = "/Users/itallo/Documents/GitHub/Tarea2_final"
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
 km = read_sf(paste0(path, "/cuenca.kml"))
@@ -185,6 +185,7 @@ et.m = daily_to_monthly(et, dates = fechas.et, fun = "sum")
 et.m
 et.y = to_yearly(et.m, dates = names(et.m), fun = "sum")
 et.y
+lc.crop
 et
 
 '''
@@ -236,14 +237,15 @@ lc.cats
 lc.reclass = classify(lc.r, rcl.mat, right=NA)
 levels(lc.reclass) = lc.cats
 
-plot(lc.reclass, main = "LandCover Reclasificado", col = c("yellow","purple","red","blue","green"))
+plot(lc.reclass, main = "LandCover Reclasificado", col = c("yellow","purple","red","blue","green", "white"))
 
+et.y[1]
 # cuanto mas grande son los pixeles de ET de modis con respecto a la resolucion del LandCover?
-fac = res(et.y)[1]/res(lc)[1];fac
+fac = res(et.y)[1]/res(lc.proj)[1];fac
 # cambiar resolucion a un raster
-lc.agg = aggregate(lc, fact = fac, fun = "modal")
+lc.agg = aggregate(lc.crop, fact = fac, fun = "modal")
 
-plot(lc, main = "LandCover resolucion original")
+plot(lc.crop, main = "LandCover resolucion original")
 plot(lc.agg, main = "LandCover de baja resolucion")
 
 # resamplear para que los raster coincidan pixel a pixel
