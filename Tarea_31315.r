@@ -271,7 +271,7 @@ etr_mean
 # graficar serie de tiempo por cobertura
 ggplot(etr_mean, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'AÒo', y = 'Etr (mm)', title = 'Consumo medio por cobertura de suelo',
+  labs(x = 'A?o', y = 'Etr (mm)', title = 'Consumo medio por cobertura de suelo',
        color = 'Cobertura')
 
 # Consumo total por cobertura
@@ -283,7 +283,7 @@ etr_total
 # graficar serie de tiempo por cobertura
 ggplot(etr_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'AÒo', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
+  labs(x = 'A?o', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
 # Asignar ET anual de las plantaciones a los pixeles de matorral
@@ -325,7 +325,7 @@ etrmod_total
 # graficar serie de tiempo por cobertura
 ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'AÒo', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
+  labs(x = 'A?o', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
 area_pixel = 500*500 #m2
@@ -349,7 +349,7 @@ etrmod_total = etrmod_total %>% group_by(fecha) %>%
 # graficar serie de tiempo por cobertura
 ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'AÒo', y = 'Etr (m3/aÒo)', title = 'Consumo total por cobertura de suelo',
+  labs(x = 'A?o', y = 'Etr (m3/a?o)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
 etrmod_total = etrmod_total %>% group_by(fecha) %>% 
@@ -486,7 +486,7 @@ ggplot(data.year)+
   scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")),
                date_labels = "%Y", date_breaks = "2 year")+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
-       subtitle = "Los aÒos sin medicion de caudal, faltan datos en algunos meses",
+       subtitle = "Los a?os sin medicion de caudal, faltan datos en algunos meses",
        color = "")
 
 
@@ -651,16 +651,19 @@ q.month = q.month %>% mutate(
   caudal = caudal*(3600*24*days)/(0.001*area_cuenca)
 )
 ###hasta aqui vamo bien jeje
-data.month = full_join(pp.month, et.month, by = "fecha") %>% 
-  full_join(q.month, by = "fecha") %>% 
+data.month <- pp.month %>%
+  rename(fecha = mes) %>%
+  left_join(et.month, by = "fecha") %>%
+  full_join(q.month, by = "fecha") %>%
   dplyr::select(-days)
-data.month
+
+
 
 ggplot(data.month)+
   geom_line(aes(x = fecha, y = pp, color = "Precipitaci√≥n"))+
   geom_line(aes(x = fecha, y = et, color = "ETr"))+
   geom_line(aes(x = fecha, y = caudal,color = "Caudal"))+
-  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")))+
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")))+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        color = "")
 
@@ -698,7 +701,7 @@ ggplot(data.year)+
   geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
-  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")),
                date_labels = "%Y", date_breaks = "2 year")+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        subtitle = "Los a√±o sin medicion de caudal, faltan datos en algunos meses",
@@ -721,7 +724,7 @@ ggplot(data.year)+
   geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
-  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")),
                date_labels = "%Y", date_breaks = "2 year")+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        subtitle = "Se eliminan los meses de datos de caudal faltantes antes de sumar el acumulado anual",
@@ -744,7 +747,7 @@ ggplot(data.year)+
   geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
-  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")),
                date_labels = "%Y", date_breaks = "2 year")+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        subtitle = "Se ignoran los a√±os donde faltan datos mensuales de caudal",
@@ -764,7 +767,7 @@ ggplot(data.year)+
   geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_point(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
-  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")),
                date_labels = "%Y", date_breaks = "2 year")+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        subtitle = "La suma anual se hace con todos los meses disponibles para cada variable",
