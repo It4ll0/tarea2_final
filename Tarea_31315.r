@@ -57,7 +57,7 @@ lc.file = paste0(path, "/LC_CHILE_2014_b.tif")
 lc = rast(lc.file)
 
 #Cortamos el Lancover al area de nuestra cuenca
-lc.proj = project(lc, cuenca, method = "bilinear") #Metodo bilinear para datos categoricos
+lc.proj = project(lc, cuenca, method = "near") #Metodo near para datos categoricos
 lc.mask = mask(lc.proj, cuenca)
 lc.crop = crop(lc.mask, cuenca)
 plot(lc.crop)
@@ -108,8 +108,6 @@ pp.year = pp.month %>%
   group_by(fecha) %>% 
   summarise(pp = sum(pp))
 pp.year
-
-
 
 'MODIS'
 #Importamos los datos modis del area y les ponemos el formato que necesitamos
@@ -184,43 +182,18 @@ et.m = daily_to_monthly(et, dates = fechas.et, fun = "sum")
 et.m
 et.y = to_yearly(et.m, dates = names(et.m), fun = "sum")
 et.y
-lc.crop
 et
-
-'''
-#Limpiamos y ordenamos los datos
-cat.id = values(lc.crop) %>% unique();cat.id
-cat.id = cat.id[-1];cat.id
-cat.id = sort(cat.id);cat.id
-
-fac = res(et)[1]/res(lc)[1];fac
-lc.agg = aggregate(lc.crop, fact = fac, fun = "modal")
-
-plot(lc.crop, main = "LandCover resolucion original")
-plot(lc.agg, main = "LandCover de baja resolucion")
-
-# Obtenenemos la proyecci?n del raster de origen
-lc.proj <- crs(lc.agg)
-
-# Proyectamos el raster de destino
-et.proj <- project(et, lc.proj)
-
-# Resampleamos el raster lc.agg utilizando 'resample()' y lo ajustamos
-lc.r <- resample(lc.agg, et.proj, method = "bilinear")
-lc.r = crop(lc.r, cuenca)
-plot(lc.r, main = "LandCover resampleado")
-'''
 
 # Tabla con todos los valores del raster
 values.lc = values(lc.crop, dataframe = TRUE) %>%
   drop_na()
-
+values.lc
 # calcular numero de pixeles por valor
 cat.npix = table(values.lc) %>% 
   as.vector
 
 # reproyectar raster
-lc.r = terra::project(lc.crop, crs(et.y), method = 'near');lc
+lc.r = terra::project(lc.crop, crs(et.y), method = 'bilinear');lc
 plot(lc.r, main = 'Land Cover reproyectado')
 
 rcl = c(100,150,1,
@@ -238,18 +211,17 @@ levels(lc.reclass) = lc.cats
 
 plot(lc.reclass, main = "LandCover Reclasificado", col = c("yellow","purple","red","blue","green", "white"))
 
-et.y[1]
 # cuanto mas grande son los pixeles de ET de modis con respecto a la resolucion del LandCover?
-fac = res(et.y)[1]/res(lc.proj)[1];fac
+fac = res(et.y)[1]/res(lc.reclass)[1];fac
 # cambiar resolucion a un raster
-lc.agg = aggregate(lc.crop, fact = fac, fun = "modal")
+lc.agg = aggregate(lc.reclass, fact = fac, fun = "modal")
 
-plot(lc.crop, main = "LandCover resolucion original")
+plot(lc.reclass, main = "LandCover resolucion original")
 plot(lc.agg, main = "LandCover de baja resolucion")
 
 # resamplear para que los raster coincidan pixel a pixel
 lc.r = resample(lc.agg, et.y, method = "near")
-plot(lc.r, main="LandCover resampleado", col = colores)
+plot(lc.r, main="LandCover resampleado", col = c("yellow","purple","red","blue","green", "white"))
 
 # Consumo medio por cobertura
 etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>% 
@@ -257,9 +229,64 @@ etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>%
   mutate(fecha = as_date(fecha))
 etr_mean
 
+# graficar serie de tiempo por cobertura
+ggplot(etr_mean, aes(x = fecha, y = ET))+
+  geom_line(linewidth = 1)+
+  labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo medio por cobertura de suelo',
+       color = 'Cobertura')
 
+# Consumo total por cobertura
+etr_total = zonal(et.y, lc.r, fun = 'sum', na.rm = TRUE) %>% 
+  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  mutate(fecha = as_date(fecha))
+etr_total
 
+# graficar serie de tiempo por cobertura
+ggplot(etr_total, aes(x = fecha, y = ET))+
+  geom_line(linewidth = 1)+
+  labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
+       color = 'Cobertura')
 
+# Asignar ET anual de las plantaciones a los pixeles de matorral
+# raster vacio para guardar et modificada
+et.mod = rast()
+# numero de capaz sobre las que iterar
+n = nlyr(et.y)
+# vector con la ETr anual de las plantaciones forestales
+et_pf = etr_mean %>% 
+  filter(nombre == 'Matorrales') %>% 
+  pull(ET);et_pf
+
+# ciclo de 1 a n
+for (i in 1:n) {
+  # seleccionar imagen i de ETr
+  img_i = et.y[[i]]
+  # modificar ETr de las plantaciones a los pixeles que tienen categoria 4 en el LC (matorrales)a
+  img_i[lc.r == 5] = et_pf[i]
+  # guardar la imagen modificada junto con las anteriores
+  et.mod = c(et.mod, img_i)
+}
+
+# plot ET original
+plot(et.y[[1]], main = paste0(names(et.y)[1], ' ET original'))
+# plot ET modificada
+plot(et.mod[[1]], main = paste0(names(et.y)[1], ' ET modificada'))
+plot(mask(et.mod[[1]], lc.r), main = paste0(names(et.y)[1], ' ET modificada'))
+
+# Media de todos los pixeles por categoria
+etrmod_mean = zonal(et.mod, lc.r, fun = 'mean', na.rm = TRUE);etrmod_mean
+
+# Consumo total de todos los pixeles por cobertura
+etrmod_total = zonal(et.mod, lc.r, fun = 'sum', na.rm = TRUE) %>% 
+  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  mutate(fecha = as_date(fecha))
+etrmod_total
+
+# graficar serie de tiempo por cobertura
+ggplot(etrmod_total, aes(x = fecha, y = ET, color = name))+
+  geom_line(linewidth = 1)+
+  labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
+       color = 'Cobertura')
 
 #reproyectamos lo rasters para que tengan el mismo extend
 lc.reclass.reprojected <- project(lc.reclass, crs(et))
