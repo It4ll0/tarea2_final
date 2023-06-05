@@ -193,7 +193,7 @@ cat.npix = table(values.lc) %>%
   as.vector
 
 # reproyectar raster
-lc.r = terra::project(lc.crop, crs(et.y), method = 'bilinear');lc
+lc.r = terra::project(lc.crop, crs(et.y), method = 'near');lc.r
 plot(lc.r, main = 'Land Cover reproyectado')
 
 rcl = c(100,150,1,
@@ -230,7 +230,7 @@ etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>%
 etr_mean
 
 # graficar serie de tiempo por cobertura
-ggplot(etr_mean, aes(x = fecha, y = ET))+
+ggplot(etr_mean, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
   labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo medio por cobertura de suelo',
        color = 'Cobertura')
@@ -242,7 +242,7 @@ etr_total = zonal(et.y, lc.r, fun = 'sum', na.rm = TRUE) %>%
 etr_total
 
 # graficar serie de tiempo por cobertura
-ggplot(etr_total, aes(x = fecha, y = ET))+
+ggplot(etr_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
   labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
@@ -267,6 +267,7 @@ for (i in 1:n) {
   et.mod = c(et.mod, img_i)
 }
 
+
 # plot ET original
 plot(et.y[[1]], main = paste0(names(et.y)[1], ' ET original'))
 # plot ET modificada
@@ -283,68 +284,74 @@ etrmod_total = zonal(et.mod, lc.r, fun = 'sum', na.rm = TRUE) %>%
 etrmod_total
 
 # graficar serie de tiempo por cobertura
-ggplot(etrmod_total, aes(x = fecha, y = ET, color = name))+
+ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
   labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
-#reproyectamos lo rasters para que tengan el mismo extend
-lc.reclass.reprojected <- project(lc.reclass, crs(et))
+area_pixel = 500*500 #m2
 
-lc.reclass.resampled <- resample(lc.reclass.reprojected, et.cropped)
+et.y.m3 = et.y * (0.001*area_pixel)
+et.mod.m3 = et.mod * (0.001*area_pixel)
+plot(et.mod.m3)
+plot(et.y.m3)
 
-et.cropped <- crop(et.cropped, lc.reclass.resampled)
-
-est.zonal <- zonal(et.cropped, lc.reclass.resampled, fun = "mean", na.rm = TRUE) %>% as_tibble;est.zonal
-est.zonal = est.zonal %>% pivot_longer(cols = 2:265, names_to = "fecha", values_to = "ET");est.zonal
-
-hist(est.zonal$ET)
-summary(est.zonal$ET)
-quantile(est.zonal$ET, 0.8, na.rm = TRUE)
-
-# filtramos categorias de interes
-zonal.df = est.zonal %>%
-  rename(ID = 1) %>% 
-  mutate(fecha = as_date(fecha),
-         ID = factor(ID))
-zonal.df
-
-ggplot(zonal.df %>% filter(ID != "Otros"))+
-  geom_line(aes(x = fecha, y = ET, color = ID), linewidth = 1) +
-  scale_x_date(limits = c(ymd("2002-12-27"), ymd("2016-6-31"))) +
-  labs(x = "Fecha",y = "Evapotranspiraci?n real (mm)", 
-       title = "Evapotranspiraci?n mensual por categoria de cobertura de suelo",
-       color = "Land Cover")
-
-
-etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>% 
+# Consumo total de todos los pixeles por cobertura
+etrmod_total = zonal(et.mod.m3, lc.r, fun = 'sum', na.rm = TRUE) %>% 
   pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
   mutate(fecha = as_date(fecha))
-etr_mean
+etrmod_total
 
-# Asignar ET anual de las plantaciones a los pixeles de matorral
+etrmod_total = etrmod_total %>% group_by(fecha) %>% 
+  mutate(
+    prop = 100*ET/sum(ET)
+  )
 
-# raster vacio para guardar et modificada
-et.mod = rast()
-# numero de capaz sobre las que iterar
-n = nlyr(et.y)
-# vector con la ETr anual de las plantaciones forestales
-et_pf = etr_mean %>% 
-  filter(name == 'Plantaciones Forestales') %>% 
-  pull(ET);et_pf
-# ciclo de 1 a n
-for (i in 1:n) {
-  # seleccionar imagen i de ETr
-  img_i = et.y[[i]]
-  # modificar ETr de las plantaciones a los pixeles que tienen categoria 4 en el LC (matorrales)a
-  img_i[lc.r == 3] = et_pf[i]
-  # guardar la imagen modificada junto con las anteriores
-  et.mod = c(et.mod, img_i)
-}
+# graficar serie de tiempo por cobertura
+ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
+  geom_line(linewidth = 1)+
+  labs(x = 'Año', y = 'Etr (m3/año)', title = 'Consumo total por cobertura de suelo',
+       color = 'Cobertura') + 
+  scale_x_date(limits = c(as.Date("2003-01-01"), as.Date("2015-12-31"))) +
+  scale_y_continuous(limits = c(0,200000000000))
 
+etrmod_total = etrmod_total %>% group_by(fecha) %>% 
+  mutate(
+    prop = 100*ET/sum(ET)
+  )
+
+# grafico de torta (pie)
+etrmod_total %>% ggplot(aes(x = '', y = prop, fill = nombre))+
+  geom_bar( 
+    stat = 'identity', width = 1,
+    color="white"
+  )+
+  coord_polar("y", start=0)+
+  theme_void()+
+  facet_wrap(.~fecha, drop = TRUE)+ #crea un grafico por cada valor unico de fecha
+  scale_fill_brewer(palette="Set1")+ # remove background, grid, numeric labels
+  labs(fill = 'Cobertura', title = 'Evapotranspiración real anual por cada cobertura de suelo')
+
+# Graficar solo un año
+etrmod_total %>% 
+  filter(fecha == ymd("2010-01-01"), nombre != "Otros") %>% 
+  ggplot(aes(x = '', y = prop, fill = nombre))+
+  geom_bar( 
+    stat = 'identity', width = 1,
+    color="white"
+  )+
+  coord_polar("y", start=0)+
+  theme_void()+
+  facet_wrap(.~fecha, drop = TRUE)+
+  scale_fill_brewer(palette="Set1")+ # remove background, grid, numeric labels
+  labs(fill = 'Cobertura', title = 'Evapotranspiración real anual por cada cobertura de suelo')
+
+# exportar tabla con datos de etr total por cobertura
+dir.create("resultados")
+write_csv(etrmod_total, "resultados/evapotranspiracion_total_por_cobertura_modificada.csv")
 
 # Etr anual de la cuenca modificada para el balance hidrico
-extr = terra::extract(et.mod, cuenca)
+extr <- terra::extract(et.mod, cuenca)
 et.year.mod = extr %>%
   select(-ID) %>% 
   drop_na() %>% 
@@ -362,6 +369,7 @@ et.year = extr %>%
   pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et") %>% 
   mutate(fecha = as_date(fecha))
 et.year
+
 
 'LANDCOVER ZHAO'
 #Proyectamos las categorias solicitadas en nuestro raster segun el LandCover Zhao
