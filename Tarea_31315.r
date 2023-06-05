@@ -85,14 +85,13 @@ length(fechas.pp) == length(names(pp))
 extr = terra::extract(pp, km)
 as_tibble(extr)
 
-
-# calcular precipitacion promedio de la cuenca
-pp.day = extr %>%
-  select(-ID) %>% 
-  drop_na() %>% 
-  summarise_all(mean) %>% 
-  pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "pp")
+################# paso a datos diarios la precipitacion de la cuenca
+extr <- extr %>% select(-ID)
+extr <- extr %>% drop_na()
+pp.day <- extr %>% summarise_all(mean)
+pp.day <- pp.day %>% pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "pp")
 pp.day
+
 
 # PP mensual
 pp.month = pp.day %>% 
