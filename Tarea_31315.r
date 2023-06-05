@@ -12,6 +12,8 @@ library(vctrs)
 library(Kendall)
 library(raster)
 library(ggrepel)
+library(lwgeom)
+
 options(scipen = 999)
 
 #path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
@@ -67,7 +69,7 @@ pp    #datos de CR2MET almacenados en pp
 
 # crear vector de fechas
 fechas.pp = seq(
-  ymd("1995-01-01"),
+  ymd("2000-01-01"),##cambio de fecha
   ymd("2015-12-31"),
   by = "days"
 )
@@ -446,7 +448,7 @@ q.month = read_csv(paste0(path, "/Caudal_Aconcagua.csv")) %>%
 q.month
 
 # vector de fechas mensuales
-fechas = seq(ym("1995-01"), ym("2015-12"), by = "months")
+fechas = seq(ym("2000-01"), ym("2015-12"), by = "months") ##cambio fecha
 
 # crear columna con fechas
 q.month <- q.month %>% 
@@ -530,28 +532,13 @@ pp.year = pp.month %>%
   summarise(pp = sum(pp))
 pp.year
 
-# PET mensual
-pet.month = pet.day %>% 
-  mutate(fecha = as_date(fecha),
-         mes = floor_date(fecha, unit = "month")) %>% 
-  group_by(mes) %>% 
-  summarise(pet = sum(pet))
-pet.month
-
-# PET anual
-pet.year = pet.month %>% 
-  mutate(fecha = as_date(mes),
-         year = floor_date(fecha, unit = "year")) %>% 
-  group_by(year) %>% 
-  summarise(pet = sum(pet))
-pet.year
-
 
 # Precipitacion -----------------------------------------------------------
 
 # Tendencia de los datos de precipitacion mensual
 res = MannKendall(pp.month$pp)
 res
+
 
 # Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
 pp.month.ts = ts(data = pp.month$pp, start = c(1960,1), frequency = 12)
@@ -631,115 +618,6 @@ ggplot(et.year, aes(x=fecha, y=et))+
   geom_line()+
   geom_smooth()
 
-
-
-# Evapotranspiracion potencial --------------------------------------------
-# Tendencia de los datos de precipitacion mensual
-res = MannKendall(pet.month$pet)
-res
-
-# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
-pet.month.ts = ts(data = pet.month$pet, start = c(1960,1), frequency = 12)
-pet.month.ts
-
-# Analisis de tendencia estacional
-SeasonalMannKendall(pet.month.ts)
-
-# Agregar una linea suavizada a los datos para observar la tendencia
-ggplot(pet.month, aes(x=mes, y=pet))+
-  geom_line()+
-  geom_smooth()
-
-# Tendencia de la precipitacion anual
-res = MannKendall(pet.year$pet)
-res
-
-# Tambien se puede calcular una tendencia por estaciones para eso es necesario crear un objeto "timeseries" (ts)
-pet.year.ts = ts(data = pet.year$pet, start = c(1960), frequency = 1)
-pet.year.ts
-
-# Analisis de tendencia estacional
-SeasonalMannKendall(pet.year.ts)
-
-# Agregar una linea suavizada a los datos para observar la tendencia
-ggplot(pet.year, aes(x=year, y=pet))+
-  geom_line()+
-  geom_smooth()
-
-# Acortemos los datos desde 2010 a 2021
-pet.year.2 = pet.year %>% filter(year > ymd("2000-01-01"))
-
-# Tendencia de la precipitacion anual
-res = MannKendall(pet.year.2$pet)
-res
-
-# Analisis de correlacion -------------------------------------------------
-
-# CORRELACION DE DATOS MENSUALES
-# unimos las tablas de datos mensuales
-month.data = left_join(et.month, pp.month, by = c("fecha"="mes")) %>% 
-  left_join(pet.month, by = c("fecha"="mes"))
-month.data
-
-# ajustamos un modelo lineal a la pp y etr
-linear.model = lm(formula = et ~ pp, data = month.data)
-summary(linear.model)
-coefficients(linear.model)
-
-# plotear la correlacion
-ggplot(month.data, aes(x= et, y = pp))+
-  geom_point()+ # grafico de dispersion
-  geom_abline()+ # linea 1:1
-  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
-  ggpubr::stat_cor()+ # escribe el valor de  la correlacion (R) en el grafico
-  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
-
-# ajustamos un modelo lineal a la etp y etr
-linear.model = lm(formula = et ~ pet, data = month.data)
-summary(linear.model)
-coefficients(linear.model)
-
-# plotear la correlacion
-ggplot(month.data, aes(x= et, y = pet))+
-  geom_point()+ # grafico de dispersion
-  geom_abline()+ # linea 1:1
-  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
-  ggpubr::stat_cor()+ # escribe el valor de  la correlacion (R) en el grafico
-  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
-
-
-# CORRELACION DE DATOS ANUALES
-# unimos las tablas de datos mensuales
-year.data = left_join(et.year, pp.year, by = c("fecha"="year")) %>% 
-  left_join(pet.year, by = c("fecha"="year"))
-
-
-# ajustamos un modelo lineal a la et y pp
-linear.model = lm(formula = et ~ pp, data = year.data)
-summary(linear.model)
-coefficients(linear.model)
-
-# plotear la correlacion
-ggplot(year.data, aes(x= et, y = pp))+
-  geom_point()+ # grafico de dispersion
-  geom_abline()+ # linea 1:1
-  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
-  ggpubr::stat_cor(label.x = 500)+ # escribe el valor de  la correlacion (R) en el grafico
-  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
-
-# ajustamos un modelo lineal a la et y etp
-linear.model = lm(formula = et ~ pet, data = year.data)
-summary(linear.model)
-coefficients(linear.model)
-
-# plotear la correlacion
-ggplot(year.data, aes(x= et, y = pet))+
-  geom_point()+ # grafico de dispersion
-  geom_abline()+ # linea 1:1
-  geom_smooth(method = "lm")+ # linea del modelo lineal ajustado
-  ggpubr::stat_cor(label.x = 1600)+ # escribe el valor de  la correlacion (R) en el grafico
-  tune::coord_obs_pred() # mantiene los mismos limites para el eje x e y (para obtener un grafico cuadrado)
-
 # Balance Hídrico.
 # Datos de caudales estan en m3/s mientras que PP y ETr estan en mm
 # Se deben transformar datos de m3/s a mm
@@ -763,8 +641,8 @@ ggplot(year.data, aes(x= et, y = pet))+
 
 # calcular el area de la cuenca
 sf_use_s2(FALSE) # necesario cuando la cuenca esta en coordenadas geográficas
-st_area(cuenca) # calcular area
-area_cuenca = st_area(cuenca) %>% as.numeric() # sacar solo el valor sin la unidad
+st_area(km) # calcular area
+area_cuenca = st_area(km) %>% as.numeric() # sacar solo el valor sin la unidad
 area_cuenca
 
 # m3/s -> mm
@@ -772,10 +650,10 @@ q.month = q.month %>% mutate(
   days = days_in_month(fecha),
   caudal = caudal*(3600*24*days)/(0.001*area_cuenca)
 )
-
+###hasta aqui vamo bien jeje
 data.month = full_join(pp.month, et.month, by = "fecha") %>% 
   full_join(q.month, by = "fecha") %>% 
-  select(-days)
+  dplyr::select(-days)
 data.month
 
 ggplot(data.month)+
