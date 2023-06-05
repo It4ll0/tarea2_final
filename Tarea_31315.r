@@ -383,9 +383,10 @@ etrmod_total %>%
 #write_csv(etrmod_total, "resultados/evapotranspiracion_total_por_cobertura_modificada.csv")
 
 # Etr anual de la cuenca modificada para el balance hidrico
+
 extr = terra::extract(et.mod, km)
 et.year.mod = extr %>%
-  select(-ID) %>% 
+  .[ , -which(names(.) == "ID")] %>% 
   drop_na() %>% 
   summarise_all(median) %>%
   pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et_mod") %>% 
@@ -393,9 +394,9 @@ et.year.mod = extr %>%
 et.year.mod
 
 # Etr anual de la cuenca riginalpara el balance hidrico
-extr = terra::extract(et.y, cuenca)
+extr = terra::extract(et.y, km)
 et.year = extr %>%
-  select(-ID) %>% 
+  .[ , -which(names(.) == "ID")] %>% 
   drop_na() %>% 
   summarise_all(median) %>%
   pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et") %>% 
