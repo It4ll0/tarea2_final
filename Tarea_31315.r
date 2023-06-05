@@ -16,8 +16,8 @@ library(lwgeom)
 
 options(scipen = 999)
 
-#path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
-path = "/Users/itallo/Library/Mobile Documents/com~apple~CloudDocs/Documents/GitHub/Tarea2_final"
+path = "C:/Users/alanp/Documents/5to/cs datos espaciales/tarea2" #aqui poner el path de la carpeta para correr todo sin cambiar a cada rato
+#path = "/Users/itallo/Library/Mobile Documents/com~apple~CloudDocs/Documents/GitHub/Tarea2_final"
 # Cargar funciones --------------------------------------------------------
 #Leemos el raster y lo cortamos al area de interes
 km = read_sf(paste0(path, "/cuenca.kml"))
@@ -271,7 +271,7 @@ etr_mean
 # graficar serie de tiempo por cobertura
 ggplot(etr_mean, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo medio por cobertura de suelo',
+  labs(x = 'A�o', y = 'Etr (mm)', title = 'Consumo medio por cobertura de suelo',
        color = 'Cobertura')
 
 # Consumo total por cobertura
@@ -283,7 +283,7 @@ etr_total
 # graficar serie de tiempo por cobertura
 ggplot(etr_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
+  labs(x = 'A�o', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
 # Asignar ET anual de las plantaciones a los pixeles de matorral
@@ -325,7 +325,7 @@ etrmod_total
 # graficar serie de tiempo por cobertura
 ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'Año', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
+  labs(x = 'A�o', y = 'Etr (mm)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
 area_pixel = 500*500 #m2
@@ -349,7 +349,7 @@ etrmod_total = etrmod_total %>% group_by(fecha) %>%
 # graficar serie de tiempo por cobertura
 ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
-  labs(x = 'Año', y = 'Etr (m3/año)', title = 'Consumo total por cobertura de suelo',
+  labs(x = 'A�o', y = 'Etr (m3/a�o)', title = 'Consumo total por cobertura de suelo',
        color = 'Cobertura')
 
 etrmod_total = etrmod_total %>% group_by(fecha) %>% 
@@ -367,7 +367,7 @@ etrmod_total %>% ggplot(aes(x = '', y = prop, fill = nombre))+
   theme_void()+
   facet_wrap(.~fecha, drop = TRUE)+ #crea un grafico por cada valor unico de fecha
   scale_fill_brewer(palette="Set1")+ # remove background, grid, numeric labels
-  labs(fill = 'Cobertura', title = 'Evapotranspiración real anual por cada cobertura de suelo')
+  labs(fill = 'Cobertura', title = 'Evapotranspiracion real anual por cada cobertura de suelo')
 
 # Graficar solo un año
 etrmod_total %>% 
@@ -381,7 +381,7 @@ etrmod_total %>%
   theme_void()+
   facet_wrap(.~fecha, drop = TRUE)+
   scale_fill_brewer(palette="Set1")+ # remove background, grid, numeric labels
-  labs(fill = 'Cobertura', title = 'Evapotranspiración real anual por cada cobertura de suelo')
+  labs(fill = 'Cobertura', title = 'Evapotranspiracion real anual por cada cobertura de suelo')
 
 # exportar tabla con datos de etr total por cobertura
 #dir.create("resultados")
@@ -391,7 +391,7 @@ etrmod_total %>%
 
 extr = terra::extract(et.mod, km)
 et.year.mod = extr %>%
-  .[ , -which(names(.) == "ID")] %>% 
+  dplyr::select(-ID) %>% 
   drop_na() %>% 
   summarise_all(median) %>%
   pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et_mod") %>% 
@@ -401,7 +401,7 @@ et.year.mod
 # Etr anual de la cuenca riginalpara el balance hidrico
 extr = terra::extract(et.y, km)
 et.year = extr %>%
-  .[ , -which(names(.) == "ID")] %>% 
+  dplyr::select(-ID)%>% 
   drop_na() %>% 
   summarise_all(median) %>%
   pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et") %>% 
@@ -423,7 +423,7 @@ lc.crop[lc.crop < 300 & lc.crop >=235] = 3
 lc.crop[lc.crop < 400 & lc.crop >=300] = 4
 lc.crop[lc.crop < 500 & lc.crop >=400] = 5
 
-#writeRaster(lc.crop, paste0(path, "/"), overwrite = TRUE)
+writeRaster(lc.crop, paste0(path, "/LC_reclasificado.tif"), overwrite = TRUE)
 
 plot(lc.crop, col = c("yellow","purple","red","blue","green"), 
      main = "Landcover por categorias") #Ploteamos lc cortado, cambiamos los colores a las categorias
@@ -475,7 +475,7 @@ data.year = full_join(pp.year, et.year.mod, by = "fecha") %>%
 # Balance a hidrico anual
 # serie de tiempo de datos anuales
 ggplot(data.year)+
-  geom_line(aes(x = fecha, y = pp, color = "Precipitación"), linewidth = 0.8)+
+  geom_line(aes(x = fecha, y = pp, color = "Precipitacion"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = et, color = "ETr"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = et_mod, color = "ETr_modificada"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = caudal,color = "Caudal"), linewidth = 0.8)+
@@ -483,10 +483,10 @@ ggplot(data.year)+
   geom_line(aes(x = fecha, y = disp, color = "Disponibilidad"), linewidth = 0.8)+
   geom_line(aes(x = fecha, y = disp_mod, color = "Disponibilidad_mod"), linewidth = 0.8)+
   geom_hline(yintercept = 0, linewidt = 0.8, linetype = "dashed")+
-  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2021-12-31")),
+  scale_x_date(limits = c(ymd("2000-01-01"), ymd("2015-12-31")),
                date_labels = "%Y", date_breaks = "2 year")+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
-       subtitle = "Los año sin medicion de caudal, faltan datos en algunos meses",
+       subtitle = "Los a�os sin medicion de caudal, faltan datos en algunos meses",
        color = "")
 
 
