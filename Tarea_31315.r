@@ -24,32 +24,26 @@ write_sf(km, paste0(path, "/cuenca.geojson"))
 img.folder = paste0(path, "/landsat")
 files = list.files(img.folder, pattern = "SR_B", full.names = TRUE)
 imgs = rast(files)
-imgs
 
 img_ext = ext(imgs)
-img_ext
 
 img_ext[2]-img_ext[1]#medimos ancho y largo de la imagen
 img_ext[4]-img_ext[3]
 st_crs(imgs) == st_crs(km) 
 
 img.crs = st_crs(imgs)
-img.crs
 
 v = st_transform(x = km, crs = img.crs)
 
 st_crs(imgs) == st_crs(v)#verificamos que se tenga el mismo crs
 imgs.c = crop(imgs, vect(v))
-plot(imgs.c)
 
 imgs.m = mask(imgs, vect(v))#creamos mascara de la cuenca
-plot(imgs.m)
 
 imgs.cm = crop(imgs.m, vect(v))
-plot(imgs.cm)
 
 imgs.r = project(imgs.cm, vect(km), method = "near")
-cuenca = imgs.r[[5]]#porque 5???
+cuenca = imgs.r[[5]]#porque 5???????
 plot(cuenca)
 
 #Importamos el LandCover Zhao
@@ -116,6 +110,52 @@ dir=paste0(path, "/modis")
 files = list.files(dir, full.names = TRUE, pattern = "_ET_500");files#datos evotranspiracion
 
 et = rast(files)
+
+separate_eight_day_composite = function(x, fechas){
+  # dias que faltan para terminar el mes
+  days.dif = 1+(days_in_month(fechas) - day(fechas))
+  
+  # si faltan menos de 8 dias entonces la imagen comprende datos que pertenecen al mes siguiente
+  index = grep(TRUE, days.dif<8)
+  
+  # no considerar la ultima imagen del año
+  index = index[-length(index)]
+  
+  # seleccionar imagenes, fechas y dias de las imagenes que abarcan mas de un mes
+  x_i = x[[index]]
+  fechas_img = fechas[index]
+  days.left = days.dif[index]
+  
+  # raster vacio para guardar resultados
+  r1 = rast()
+  
+  # guardar las imagenes que abarcan solo 1 mes dentro de la composicion de 8 días
+  r2 = x[[-index]]
+  
+  # cantidad de imagenes que abarcan mas de un mes
+  n = length(fechas_img)
+  
+  # ciclo de 1 a n
+  for (i in 1:n) {
+    # obtener la fecha del último dia que abarca la serie de 8 días
+    fecha2 = fechas_img[i] %m+% days(7)
+    
+    # Multiplicamos la imagen por la proporcion de días que abarca de cada mes
+    # mes actual
+    x1 = x_i[[i]] * (days.left[i]/8)
+    # mes siguiente
+    x2 = x_i[[i]] * (1-days.left[i]/8)
+    # asignar fecha correspondiente a cada imagen
+    names(x1) = fechas_img[i]
+    names(x2) = fecha2
+    # guardar las nuevas imagenes en un vector
+    r1 = c(r1, x1, x2)
+  }
+  r = c(r1,r2)
+  return(r)
+}
+et = separate_eight_day_composite(et, fechas.et);et
+
 fechas.et = names(et) %>% 
   str_sub(start = 26, end = 32) %>%
   as.Date("%Y%j")
@@ -124,13 +164,8 @@ names(et) = fechas.et
 hist(et[[1]], breaks = 20)
 summary(et[[1]])
 
-q90 = quantile(et, probs = 0.9)
-plot(q90)
+et[et > 1000] = NA
 
-cortes = seq(0,50,10);cortes
-
-plot(et, breaks=cortes)
-plot(et[[1]], breaks=cortes, main = "ET MODIS 2000-01-01")
 
 #Obtenemos las imagenes mensuales a partir de diarias
 daily_to_monthly = function(x, dates, fun = "mean"){
@@ -225,7 +260,7 @@ plot(lc.r, main="LandCover resampleado", col = c("yellow","purple","red","blue",
 
 # Consumo medio por cobertura
 etr_mean = zonal(et.y, lc.r, fun = 'mean', na.rm = TRUE)%>% 
-  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  pivot_longer(cols = 2:17, names_to = 'fecha', values_to = 'ET') %>% 
   mutate(fecha = as_date(fecha))
 etr_mean
 
@@ -237,7 +272,7 @@ ggplot(etr_mean, aes(x = fecha, y = ET, color = nombre))+
 
 # Consumo total por cobertura
 etr_total = zonal(et.y, lc.r, fun = 'sum', na.rm = TRUE) %>% 
-  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  pivot_longer(cols = 2:17, names_to = 'fecha', values_to = 'ET') %>% 
   mutate(fecha = as_date(fecha))
 etr_total
 
@@ -267,7 +302,6 @@ for (i in 1:n) {
   et.mod = c(et.mod, img_i)
 }
 
-
 # plot ET original
 plot(et.y[[1]], main = paste0(names(et.y)[1], ' ET original'))
 # plot ET modificada
@@ -279,7 +313,7 @@ etrmod_mean = zonal(et.mod, lc.r, fun = 'mean', na.rm = TRUE);etrmod_mean
 
 # Consumo total de todos los pixeles por cobertura
 etrmod_total = zonal(et.mod, lc.r, fun = 'sum', na.rm = TRUE) %>% 
-  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  pivot_longer(cols = 2:17, names_to = 'fecha', values_to = 'ET') %>% 
   mutate(fecha = as_date(fecha))
 etrmod_total
 
@@ -298,7 +332,7 @@ plot(et.y.m3)
 
 # Consumo total de todos los pixeles por cobertura
 etrmod_total = zonal(et.mod.m3, lc.r, fun = 'sum', na.rm = TRUE) %>% 
-  pivot_longer(cols = 2:23, names_to = 'fecha', values_to = 'ET') %>% 
+  pivot_longer(cols = 2:17, names_to = 'fecha', values_to = 'ET') %>% 
   mutate(fecha = as_date(fecha))
 etrmod_total
 
@@ -311,9 +345,7 @@ etrmod_total = etrmod_total %>% group_by(fecha) %>%
 ggplot(etrmod_total, aes(x = fecha, y = ET, color = nombre))+
   geom_line(linewidth = 1)+
   labs(x = 'Año', y = 'Etr (m3/año)', title = 'Consumo total por cobertura de suelo',
-       color = 'Cobertura') + 
-  scale_x_date(limits = c(as.Date("2003-01-01"), as.Date("2015-12-31"))) +
-  scale_y_continuous(limits = c(0,200000000000))
+       color = 'Cobertura')
 
 etrmod_total = etrmod_total %>% group_by(fecha) %>% 
   mutate(
@@ -334,7 +366,7 @@ etrmod_total %>% ggplot(aes(x = '', y = prop, fill = nombre))+
 
 # Graficar solo un año
 etrmod_total %>% 
-  filter(fecha == ymd("2010-01-01"), nombre != "Otros") %>% 
+  filter(fecha == ymd("2010-01-01")) %>% 
   ggplot(aes(x = '', y = prop, fill = nombre))+
   geom_bar( 
     stat = 'identity', width = 1,
@@ -347,18 +379,18 @@ etrmod_total %>%
   labs(fill = 'Cobertura', title = 'Evapotranspiración real anual por cada cobertura de suelo')
 
 # exportar tabla con datos de etr total por cobertura
-dir.create("resultados")
-write_csv(etrmod_total, "resultados/evapotranspiracion_total_por_cobertura_modificada.csv")
+#dir.create("resultados")
+#write_csv(etrmod_total, "resultados/evapotranspiracion_total_por_cobertura_modificada.csv")
 
 # Etr anual de la cuenca modificada para el balance hidrico
-extr <- terra::extract(et.mod, cuenca)
+extr = terra::extract(et.mod, km)
 et.year.mod = extr %>%
   select(-ID) %>% 
   drop_na() %>% 
   summarise_all(median) %>%
   pivot_longer(cols = 1:ncol(.), names_to = "fecha", values_to = "et_mod") %>% 
   mutate(fecha = as_date(fecha))
-et.year
+et.year.mod
 
 # Etr anual de la cuenca riginalpara el balance hidrico
 extr = terra::extract(et.y, cuenca)
