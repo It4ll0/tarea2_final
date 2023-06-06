@@ -611,9 +611,11 @@ SeasonalMannKendall(pp.year.ts)
 ggplot(pp.year, aes(x = year, y = pp)) +
   geom_line() +
   geom_smooth() +
-  labs(title = "Tendencia de la precipitación anual",
-       x = "Año",
-       y = "Precipitación")
+  labs(
+    title = "Tendencia de la precipitación anual",
+    x = "Año",
+    y = "Precipitación"
+  )
 
 # Acortemos los datos desde 2010 a 2021
 pp.year.2 <- pp.year %>% filter(year > ymd("2000-01-01"))
@@ -650,10 +652,12 @@ SeasonalMannKendall(et.month.ts)
 # Agregar una linea suavizada a los datos para observar la tendencia
 ggplot(et.month, aes(x = fecha, y = et)) +
   geom_line() +
-  geom_smooth()+
-  labs(title = "Tendencia de evapotranspiración por estaciones",
-       x = "Año",
-       y = "evapotranspiración")
+  geom_smooth() +
+  labs(
+    title = "Tendencia de evapotranspiración por estaciones",
+    x = "Año",
+    y = "evapotranspiración"
+  )
 
 
 # Tendencia de la precipitacion anual
@@ -667,9 +671,12 @@ et.year.ts
 # Agregar una linea suavizada a los datos para observar la tendencia
 ggplot(et.year, aes(x = fecha, y = et)) +
   geom_line() +
-  geom_smooth() +labs(title = "Tendencia de evapotranspiración anual",
-                     x = "Año",
-                     y = "evapotranspiración")
+  geom_smooth() +
+  labs(
+    title = "Tendencia de evapotranspiración anual",
+    x = "Año",
+    y = "evapotranspiración"
+  )
 
 # Balance Hídrico.
 # Datos de caudales estan en m3/s mientras que PP y ETr estan en mm
