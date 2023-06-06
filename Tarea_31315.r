@@ -777,4 +777,3 @@ ggplot(data.year)+
   labs(x = "tiempo", y = "(mm)", title = "Serie de tiempo mensual de componentes del BH",
        subtitle = "La suma anual se hace con todos los meses disponibles para cada variable",
        color = "")
-
